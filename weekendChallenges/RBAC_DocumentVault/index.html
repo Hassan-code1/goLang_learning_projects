@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBAC Vault - Secure API</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .vault-card {
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid #333;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #4caf50;
+            letter-spacing: 1px;
+        }
+
+        .hint-box {
+            background: #2a2a2a;
+            border-left: 3px solid #2196f3;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+            text-align: left;
+            color: #ddd;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #2c2c2c;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4caf50;
+        }
+
+        #token-display {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #1a1a1a;
+            color: #4caf50;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 11px;
+            resize: none;
+            word-wrap: break-word;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btn-primary { background-color: #4caf50; color: white; }
+        .btn-primary:hover { background-color: #45a049; }
+        
+        .btn-public { background-color: #2196f3; color: white; }
+        .btn-public:hover { background-color: #1976d2; }
+
+        .btn-internal { background-color: #ff9800; color: white; }
+        .btn-internal:hover { background-color: #e68a00; }
+        
+        .btn-danger { background-color: #f44336; color: white; }
+        .btn-danger:hover { background-color: #da190b; }
+
+        .btn-logout { background-color: #555; color: white; }
+        .btn-logout:hover { background-color: #444; }
+
+        #message-box {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            display: none;
+            word-wrap: break-word;
+        }
+
+        .success { background-color: rgba(76, 175, 80, 0.1); color: #4caf50; border: 1px solid #4caf50; }
+        .error { background-color: rgba(244, 67, 54, 0.1); color: #f44336; border: 1px solid #f44336; }
+        
+        #auth-section { display: block; }
+        #vault-section { display: none; }
+
+        @media (max-width: 480px) {
+            .vault-card {
+                padding: 20px;
+            }
+
+            h2 {
+                font-size: 1.4rem;
+            }
+
+            .hint-box {
+                font-size: 0.8rem;
+                padding: 8px;
+            }
+
+            button {
+                padding: 12px;
+                font-size: 15px;
+            }
+
+            #token-display {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="vault-card">
+    <h2>🛡️ RBAC Document Vault</h2>
+
+    <div id="auth-section">
+        <div class="hint-box">
+            <strong>Test Accounts (Password: password123)</strong><br>
+            • <b>alice</b> (Role: Admin)<br>
+            • <b>bob</b> (Role: Employee)<br>
+            • <b>charlie</b> (Role: Guest)
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="username" placeholder="Username" autocomplete="off">
+            <input type="password" id="password" placeholder="Password">
+        </div>
+        <button class="btn-primary" onclick="login()">Login to Vault</button>
+    </div>
+
+    <div id="vault-section">
+        <p style="color: #aaa; margin-bottom: 10px; font-size: 14px;">You are securely authenticated.</p>
+        
+        <p style="color: #888; font-size: 12px; margin: 0 0 5px 0; text-align: left;">Your Active JWT:</p>
+        <textarea id="token-display" rows="3" readonly></textarea>
+
+        <button class="btn-public" onclick="fetchDoc('public')">🔓 Access Public Doc</button>
+        <button class="btn-internal" onclick="fetchDoc('internal')">🔐 Access Internal Doc</button>
+        <button class="btn-danger" onclick="fetchDoc('classified')">🛑 Access Classified Doc</button>
+        
+        <div style="margin-top: 15px;">
+            <button class="btn-logout" onclick="logout()">Disconnect</button>
+        </div>
+    </div>
+
+    <div id="message-box"></div>
+</div>
+
+<script>
+    function getBackendDomain() {
+        const domain = window.location.hostname;
+        
+        if (domain === "localhost" || domain === "127.0.0.1") {
+            return "http://localhost:8080";
+        }
+
+        const protocolPrefix = "https://";
+        const firstDotIndex = domain.indexOf('.');
+        
+        if (firstDotIndex === -1) {
+            return protocolPrefix + domain + "-backend";
+        }
+
+        const subdomain = domain.substring(0, firstDotIndex);
+        const restOfDomain = domain.substring(firstDotIndex);
+        return protocolPrefix + subdomain + "-backend" + restOfDomain;
+    }
+
+    function showMessage(msg, isError = false) {
+        const box = document.getElementById('message-box');
+        box.style.display = 'block';
+        box.textContent = msg;
+        box.className = isError ? 'error' : 'success';
+    }
+
+    function checkAuth() {
+        const token = localStorage.getItem('cipher_jwt');
+        if (token) {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('vault-section').style.display = 'block';
+            
+            document.getElementById('token-display').value = token;
+        } else {
+            document.getElementById('auth-section').style.display = 'block';
+            document.getElementById('vault-section').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            
+            document.getElementById('token-display').value = '';
+            document.getElementById('message-box').style.display = 'none';
+        }
+    }
+
+    // Login API Call
+    async function login() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const apiUrl = getBackendDomain() + "/login";
+
+        try {
+            const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('cipher_jwt', data.token); 
+                showMessage("Logged in successfully!");
+                checkAuth();
+            } else {
+                const text = await res.text();
+                showMessage(text, true);
+            }
+        } catch (error) {
+            showMessage("Network Error. Is the backend running?", true);
+        }
+    }
+
+    // Access Protected Route (Requires JWT + Correct Role)
+    async function fetchDoc(tier) {
+        const token = localStorage.getItem('cipher_jwt');
+        const apiUrl = getBackendDomain() + "/docs/" + tier;
+
+        try {
+            const res = await fetch(apiUrl, {
+                method: 'GET',
+                // Attach JWT
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+
+            if (res.ok) {
+                const text = await res.text();
+                showMessage(`✅ Success: ${text}`);
+            } else {
+                const text = await res.text();
+                showMessage(`⛔ Access Denied (${res.status}): ${text}`, true);
+                
+                // If token is completely invalid/expired, force logout
+                if (res.status === 401) {
+                    localStorage.removeItem('cipher_jwt');
+                    setTimeout(checkAuth, 2000); 
+                }
+            }
+        } catch (error) {
+            showMessage("Network Error.", true);
+        }
+    }
+
+    // Secure Logout
+    function logout() {
+        // Clear local storage
+        localStorage.removeItem('cipher_jwt');
+        checkAuth();
+        showMessage("Logged out securely. Token removed from browser.");
+    }
+
+    // Run auth check on page load
+    checkAuth();
+</script>
+
+</body>
+</html>
+
+

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"strings"
 )
 
 type cordinate struct{
@@ -54,5 +55,13 @@ func main(){
 
 	// var fl1 (float64) = -55.00
 	// fmt.Println(fl1.abs()) // wrong 
+
+	text := "hello , **Hassan**"
+	parts := strings.Split(text, "**")
+	for i := 1; i < len(parts); i += 2 {
+		parts[i] = "<strong>" + parts[i] + "</strong>"
+	}
+	text = strings.Join(parts, "")
+	fmt.Println(text)
 	return
 }
