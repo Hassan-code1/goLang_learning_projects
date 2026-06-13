@@ -1,0 +1,12 @@
+Url: https://example.com
+Status: 200
+Content Length: 559
+
+Url: https://go.dev
+Status: 200
+Content Length: 64029
+
+Url: https://golang.org
+Status: 200
+Content Length: 64029
+
